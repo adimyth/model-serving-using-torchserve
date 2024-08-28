@@ -1,0 +1,10 @@
+torchserve
+torch-model-archiver
+torch-workflow-archiver
+soundfile
+torch
+transformers
+fastapi
+pydantic
+httpx
+uvicorn
