@@ -3,6 +3,9 @@
 1. Create a handler file. Refer [tts_handler.py](./tts_handler.py)
 2. Create model archive file
 ```bash
+# You will need HF API Key
+source .env
+
 # Create model store directory
 mkdir model_store
 
