@@ -15,9 +15,14 @@ torch-model-archiver --model-name multi_tts_model \
 ```
 3. Start Torch Serve
 ```bash
-torchserve --start --ncs --model-store ./model_store --models multi_tts_model.mar
+torchserve --start --ncs --model-store ./model_store --models multi_tts_model.mar --ts-config config.properties
 ```
 4. Run the FastAPI server
 ```bash
 uvicorn server:app --reload --port 8000 --host 0.0.0.0
+```
+
+To stop the Torch Serve
+```bash
+torchserve --stop
 ```
