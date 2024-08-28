@@ -3,8 +3,8 @@ import os
 import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
 from loguru import logger
+from pydantic import BaseModel
 
 app = FastAPI()
 

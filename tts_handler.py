@@ -4,9 +4,9 @@ import json
 
 import soundfile as sf
 import torch
+from loguru import logger
 from transformers import AutoTokenizer, VitsModel
 from ts.torch_handler.base_handler import BaseHandler
-from loguru import logger
 
 
 class MultiModelTTSHandler(BaseHandler):
@@ -34,60 +34,28 @@ class MultiModelTTSHandler(BaseHandler):
         self.initialized = True
 
     def preprocess(self, data):
-        logger.debug(f"Received data: {data}")
-        sentences = []
-        languages = []
-        sample_rates = []
-        for d in data:
-            # Check if the data is already a dict, if not, try to parse it
-            if isinstance(d, dict):
-                input_data = d
-            else:
-                input_data = json.loads(d.get("data") or d.get("body"))
-
-            sentences.append(input_data.get("sentence"))
-            languages.append(input_data.get("language", "en"))
-            sample_rates.append(input_data.get("sample_rate", 22050))
-
-        logger.debug(
-            f"Preprocessed data: sentences={sentences}, languages={languages}, sample_rates={sample_rates}"
-        )
-        return sentences, languages, sample_rates
+        # In our case, we will only have one request
+        # [{'body': [{'sentence': '...', 'language': 'kn'}]}]
+        data = data[0]["body"][0]
+        sentence, language = data["sentence"], data["language"]
+        logger.debug(f"Received TTS request:  ({language}) {sentence[:100]}")
+        return sentence, language
 
     def inference(self, data):
-        sentences, languages, sample_rates = data
-        outputs = []
-        for sentence, language in zip(sentences, languages):
-            model = self.models.get(language)
-            tokenizer = self.tokenizers.get(language)
-            if model is None or tokenizer is None:
-                raise ValueError(
-                    f"Model or tokenizer not found for language: {language}"
-                )
+        sentence, language = data
+        model = self.models.get(language)
+        tokenizer = self.tokenizers.get(language)
+        if model is None or tokenizer is None:
+            raise ValueError(f"Model or tokenizer not found for language: {language}")
 
-            inputs = tokenizer(sentence, return_tensors="pt").to(self.device)
-            with torch.inference_mode():
-                output = model(**inputs)
-            waveform = output.waveform[0].cpu().numpy()
-            outputs.append(waveform)
-        return outputs, sample_rates
+        inputs = tokenizer(sentence, return_tensors="pt").to(self.device)
+        with torch.inference_mode():
+            output = model(**inputs)
+        waveform = output.waveform[0].cpu().numpy()
+        return waveform
 
-    def postprocess(self, inference_output):
-        waveforms, sample_rates = inference_output
-        responses = []
-        for waveform, sample_rate in zip(waveforms, sample_rates):
-            buffer = io.BytesIO()
-            sf.write(buffer, waveform, sample_rate, format="wav")
-            buffer.seek(0)
-            responses.append(buffer.getvalue())
-        return responses
-
-    def handle(self, data, context):
-        try:
-            logger.debug("Handling request")
-            preprocessed_data = self.preprocess(data)
-            inference_output = self.inference(preprocessed_data)
-            return self.postprocess(inference_output)
-        except Exception as e:
-            logger.error(f"Error in handler: {str(e)}")
-            raise
+    def postprocess(self, waveform):
+        buffer = io.BytesIO()
+        sf.write(buffer, waveform, 16000, format="wav")
+        buffer.seek(0)
+        return buffer.getvalue()
