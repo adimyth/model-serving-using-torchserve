@@ -6,6 +6,7 @@ import soundfile as sf
 import torch
 from transformers import AutoTokenizer, VitsModel
 from ts.torch_handler.base_handler import BaseHandler
+from loguru import logger
 
 
 class MultiModelTTSHandler(BaseHandler):
@@ -33,14 +34,24 @@ class MultiModelTTSHandler(BaseHandler):
         self.initialized = True
 
     def preprocess(self, data):
+        logger.debug(f"Received data: {data}")
         sentences = []
         languages = []
         sample_rates = []
         for d in data:
-            input_data = json.loads(d.get("data") or d.get("body"))
+            # Check if the data is already a dict, if not, try to parse it
+            if isinstance(d, dict):
+                input_data = d
+            else:
+                input_data = json.loads(d.get("data") or d.get("body"))
+
             sentences.append(input_data.get("sentence"))
             languages.append(input_data.get("language", "en"))
             sample_rates.append(input_data.get("sample_rate", 22050))
+
+        logger.debug(
+            f"Preprocessed data: sentences={sentences}, languages={languages}, sample_rates={sample_rates}"
+        )
         return sentences, languages, sample_rates
 
     def inference(self, data):
@@ -70,3 +81,13 @@ class MultiModelTTSHandler(BaseHandler):
             buffer.seek(0)
             responses.append(buffer.getvalue())
         return responses
+
+    def handle(self, data, context):
+        try:
+            logger.debug("Handling request")
+            preprocessed_data = self.preprocess(data)
+            inference_output = self.inference(preprocessed_data)
+            return self.postprocess(inference_output)
+        except Exception as e:
+            logger.error(f"Error in handler: {str(e)}")
+            raise

@@ -27,17 +27,17 @@ async def tts_endpoint(request: TTSRequest):
         try:
             response = await client.post(
                 TORCHSERVE_INFERENCE_URL,
-                json={
-                    "sentence": request.sentence,
-                    "language": request.language,
-                    "sample_rate": request.sample_rate,
-                },
-                timeout=30.0,  # Increase timeout if needed
+                json=[
+                    {  # Note the list wrapping here
+                        "sentence": request.sentence,
+                        "language": request.language,
+                        "sample_rate": request.sample_rate,
+                    }
+                ],
+                timeout=30.0,
             )
             logger.debug(f"TorchServe response status: {response.status_code}")
-            logger.debug(
-                f"TorchServe response content: {response.content[:100]}..."
-            )  # Log first 100 chars of response
+            logger.debug(f"TorchServe response content: {response.content[:100]}...")
 
             if response.status_code == 200:
                 return StreamingResponse(response.iter_bytes(), media_type="audio/wav")

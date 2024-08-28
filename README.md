@@ -18,7 +18,7 @@ torch-model-archiver --model-name multi_tts_model \
 ```
 3. Start Torch Serve
 ```bash
-torchserve --start --ncs --model-store ./model_store --models multi_tts_model.mar --ts-config config.properties
+torchserve --start --ncs --model-store ./model_store --models multi_tts_model.mar --ts-config config.properties --disable-token-auth
 ```
 4. Run the FastAPI server
 ```bash
